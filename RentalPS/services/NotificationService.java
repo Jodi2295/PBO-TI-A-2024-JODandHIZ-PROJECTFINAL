@@ -1,8 +1,7 @@
 package RentalPS.services;
 
-import RentalPS.entities.Notification;
 import RentalPS.repositories.NotificationRepository;
-import java.util.List;
+import java.time.LocalDateTime;
 
 public class NotificationService {
     private NotificationRepository notificationRepository;
@@ -11,23 +10,18 @@ public class NotificationService {
         this.notificationRepository = notificationRepository;
     }
 
-    // Menampilkan notifikasi untuk pengguna tertentu
-    public void displayNotifications(String username) {
-        List<Notification> notifications = notificationRepository.getNotificationsForUser(username);
-
-        if (notifications.isEmpty()) {
-            System.out.println("Tidak ada notifikasi untuk pengguna " + username);
-        } else {
-            System.out.println("Notifikasi untuk " + username + ":");
-            for (Notification notification : notifications) {
-                System.out.println(notification.getMessage());
-            }
-        }
+    // Menambahkan notifikasi untuk rental tertentu
+    public void addNotification(int rentalId, LocalDateTime rentalEndTime) {
+        notificationRepository.addNotification(rentalId, rentalEndTime);
     }
 
-    // Metode lain untuk menambahkan notifikasi
-    public void addNotification(String username, String message) {
-        Notification notification = new Notification(username, message);
-        notificationRepository.addNotification(notification);
+    // Menghapus notifikasi terkait rental yang sudah dihapus
+    public void removeNotification(int rentalId) {
+        notificationRepository.removeNotification(rentalId);
+    }
+
+    // Menampilkan notifikasi berdasarkan rental ID
+    public void displayNotification(int rentalId) {
+        notificationRepository.displayNotification(rentalId);
     }
 }

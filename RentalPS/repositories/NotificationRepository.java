@@ -1,23 +1,29 @@
 package RentalPS.repositories;
 
-import RentalPS.entities.Notification;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 public class NotificationRepository {
-    private List<Notification> notifications = new ArrayList<>();
+    private Map<Integer, LocalDateTime> notifications = new HashMap<>();
 
-    public void addNotification(Notification notification) {
-        notifications.add(notification);
+    // Menambahkan notifikasi untuk rental tertentu
+    public void addNotification(int rentalId, LocalDateTime rentalEndTime) {
+        notifications.put(rentalId, rentalEndTime);
     }
 
-    public List<Notification> getNotificationsForUser(String username) {
-        List<Notification> userNotifications = new ArrayList<>();
-        for (Notification notification : notifications) {
-            if (notification.getUsername().equals(username)) {
-                userNotifications.add(notification);
-            }
+    // Menghapus notifikasi berdasarkan rental ID
+    public void removeNotification(int rentalId) {
+        notifications.remove(rentalId);
+    }
+
+    // Menampilkan notifikasi untuk rental ID tertentu
+    public void displayNotification(int rentalId) {
+        LocalDateTime endTime = notifications.get(rentalId);
+        if (endTime != null) {
+            System.out.println("Rental ID: " + rentalId + " akan berakhir pada: " + endTime);
+        } else {
+            System.out.println("Tidak ada notifikasi untuk rental ID: " + rentalId);
         }
-        return userNotifications;
     }
 }

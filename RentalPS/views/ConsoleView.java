@@ -5,6 +5,9 @@ import RentalPS.entities.Rental;
 import RentalPS.entities.Review;
 import RentalPS.repositories.FinancialReportRepository;
 import RentalPS.services.FinancialReportService;
+import RentalPS.services.NotificationService;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -24,6 +27,8 @@ public class ConsoleView {
 
     private static FinancialReportRepository financialReportRepository = new FinancialReportRepository();
     private static FinancialReportService financialReportService = new FinancialReportService(financialReportRepository);
+
+    private static NotificationService notificationService = new NotificationService(new RentalPS.repositories.NotificationRepository());
 
     public static void main(String[] args) {
         startApp();
@@ -99,7 +104,8 @@ public class ConsoleView {
             System.out.println("4. Lakukan Pembayaran");
             System.out.println("5. Laporan Keuangan");
             System.out.println("6. Tambahkan Ulasan");
-            System.out.println("7. Keluar dari menu utama");
+            System.out.println("7. Lihat Notifikasi Pengingat");
+            System.out.println("8. Keluar dari menu utama");
             System.out.print("Pilih: ");
             String choice = scanner.nextLine();
 
@@ -123,6 +129,9 @@ public class ConsoleView {
                     reviewRental();
                     break;
                 case "7":
+                    viewNotificationById();
+                    break;
+                case "8":
                     isRunning = false;
                     break;
                 default:
@@ -139,9 +148,13 @@ public class ConsoleView {
 
         double rentalPrice = calculateRentalPrice(psName, rentalPeriod);
         if (rentalPrice != -1) {
-            Rental rental = new Rental(rentalIdCounter++, psName, rentalPeriod, rentalPrice);
+            LocalDateTime rentalEndTime = calculateRentalEndTime(rentalPeriod);
+            Rental rental = new Rental(rentalIdCounter++, psName, rentalPeriod, rentalPrice, rentalEndTime);
             rentals.put(rental.getId(), rental);
             System.out.println("Rental berhasil ditambahkan dengan ID: " + rental.getId());
+
+            // Hitung waktu berakhirnya rental dan tambahkan notifikasi
+            notificationService.addNotification(rental.getId(), rentalEndTime);
         } else {
             System.out.println("Nama PS atau waktu sewa tidak valid!");
         }
@@ -186,6 +199,20 @@ public class ConsoleView {
         return -1;
     }
 
+    public static LocalDateTime calculateRentalEndTime(String rentalPeriod) {
+        int timeAmount = Integer.parseInt(rentalPeriod.replaceAll("[^0-9]", "").trim());
+        boolean isPerHour = rentalPeriod.contains("jam");
+
+        LocalDateTime endTime = LocalDateTime.now();
+        if (isPerHour) {
+            endTime = endTime.plusHours(timeAmount);
+        } else {
+            endTime = endTime.plusDays(timeAmount);
+        }
+
+        return endTime;
+    }
+
     public static void makePayment() {
         System.out.print("Masukkan ID rental untuk melakukan pembayaran: ");
         int id = Integer.parseInt(scanner.nextLine());
@@ -195,10 +222,11 @@ public class ConsoleView {
             double amount = rental.getPrice();
             System.out.println("Pembayaran sebesar " + String.format("Rp %d", (int) amount) + " berhasil dilakukan.");
 
-            financialReportService.recordRevenue(amount);
+            // Ubah status rental menjadi Paid (tidak dihapus)
+            rental.setStatus("Paid");
 
-            rentals.remove(id);
-            System.out.println("Rental dengan ID " + id + " telah dihapus.");
+            financialReportService.recordRevenue(amount);
+            System.out.println("Rental dengan ID " + id + " telah dibayar dan status diubah menjadi 'Paid'.");
         } else {
             System.out.println("Rental dengan ID " + id + " tidak ditemukan!");
         }
@@ -210,6 +238,7 @@ public class ConsoleView {
 
         Rental rental = rentals.remove(id);
         if (rental != null) {
+            notificationService.removeNotification(id);
             System.out.println("Rental dengan ID " + id + " telah dihapus.");
         } else {
             System.out.println("Rental dengan ID " + id + " tidak ditemukan!");
@@ -231,6 +260,28 @@ public class ConsoleView {
             System.out.println("Ulasan berhasil ditambahkan!");
         } else {
             System.out.println("Rental dengan ID " + rentalId + " tidak ditemukan!");
+        }
+    }
+
+    public static void viewNotificationById() {
+        System.out.print("Masukkan Rental ID untuk melihat notifikasi waktu berakhir: ");
+        int rentalId = Integer.parseInt(scanner.nextLine());
+
+        Rental rental = rentals.get(rentalId);
+        if (rental != null) {
+            LocalDateTime rentalEndTime = rental.getEndTime();
+
+            if (rentalEndTime != null) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                String formattedEndTime = rentalEndTime.format(formatter);
+
+                System.out.println("Rental ID: " + rental.getId() +
+                        " akan berakhir pada: " + formattedEndTime);
+            } else {
+                System.out.println("Rental ID: " + rentalId + " tidak memiliki waktu berakhir yang valid.");
+            }
+        } else {
+            System.out.println("Rental dengan ID " + rentalId + " tidak ditemukan.");
         }
     }
 }
